@@ -142,6 +142,12 @@ void print_and_exit(const char* format, ...)
   va_start(argptr, format);
   vfprintf(stderr, format, argptr);
   va_end(argptr);
+
+  if (DEBUG) {
+    fflush(g_log);
+    fclose(g_log);
+  }
+
   exit(1);
 }
 
@@ -171,11 +177,11 @@ void handle_sockets(int *sockfds, int no_of_sock)
   int num_remaining_bytes[MAX_NUM_SOCKETS];
   unsigned char recv_buffers[MAX_NUM_SOCKETS][MAX_RECV_BYTES];
   int i = 0;
-  
+
   // Keep track of whether a message should be printed at the start of the line
   // and when the prompt needs to be printed
   int new_line = 1;
-  
+
   //set of socket descriptors
   fd_set readfds;
 
@@ -183,9 +189,9 @@ void handle_sockets(int *sockfds, int no_of_sock)
   for (i = 0; i < MAX_NUM_SOCKETS; i++) {
     num_remaining_bytes[i] = 0;
   }
-   
+
   while(1)
-  { 
+  {
     int max_sockfd = 0;
     int activity = 0;
     int sock_i = 0;
@@ -197,7 +203,7 @@ void handle_sockets(int *sockfds, int no_of_sock)
       // if valid socket descriptor then add to read list
       if (sockfds[i] >= 0)
         FD_SET(sockfds[i], &readfds);
-      
+
       // highest file descriptor number, need it for the select function
       if (sockfds[i] > max_sockfd)
         max_sockfd = sockfds[i];
@@ -214,7 +220,7 @@ void handle_sockets(int *sockfds, int no_of_sock)
       printf("select error\n");
       fflush(stdout);
     }
-      
+
     // If something happened on the socket
     for (sock_i = 0; sock_i < no_of_sock; sock_i++) {
       unsigned char *recv_buffer = recv_buffers[sock_i];
@@ -226,13 +232,13 @@ void handle_sockets(int *sockfds, int no_of_sock)
         // read the incoming message
 #ifdef _WIN32
         if ((n = recv(sockfd, &recv_buffer[*socket_remaining], MAX_RECV_BYTES - *socket_remaining, MSG_PARTIAL)) > 0) {
-#else               
+#else
         if ((n = read(sockfd, &recv_buffer[*socket_remaining], MAX_RECV_BYTES - *socket_remaining)) > 0) {
-#endif          
-            
+#endif
+
           if (DEBUG)
             fprintf(g_log, ">> Received %d", n);
-            
+
           n += *socket_remaining;
           *socket_remaining = 0;
           if (DEBUG) {
@@ -243,7 +249,7 @@ void handle_sockets(int *sockfds, int no_of_sock)
             }
             fprintf(g_log, "\n");
           }
-            
+
           for (i = 0; i < n; ) {
             // Indicate when a block of data has been handled by the fact that the pointer can move on
             int increment = 0;
@@ -346,7 +352,7 @@ void handle_sockets(int *sockfds, int no_of_sock)
 
               hook_registration_received(sockfd, id, name);
 
-              increment = len;
+              increment = len - i;	//multi-probe register
               break;
             }
 
@@ -368,10 +374,10 @@ void handle_sockets(int *sockfds, int no_of_sock)
 
                 break;
             }
-          } 
+          }
         }
       }
-    }  
+    }
   } //while(1)
 }
 
